@@ -1,0 +1,28 @@
+#!/usr/bin/env groovy
+
+pipelineJob('TestApi') {
+    displayName('Build and Deploy TestApi')
+
+    properties {
+        pipelineTriggers {
+            triggers {
+                githubPush()
+            }
+        }
+    }
+
+    definition {
+        cpsScm {
+            scm {
+                git {
+                    remote {
+                        url('https://github.com/srvmsr/testapi.git')
+                        credentials('jenkins-operator')
+                    }
+                    branches('*/master')
+                }
+            }
+            scriptPath('cicd/pipelines/testapi.jenkins')
+        }
+    }
+}

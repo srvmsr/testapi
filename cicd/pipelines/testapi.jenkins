@@ -1,0 +1,60 @@
+#!/usr/bin/env groovy
+
+def label = "docker-jenkins-${UUID.randomUUID().toString()}"
+def home = "/home/jenkins"
+def workspace = "${home}/agent/workspace/build-jenkins-operator"
+def workdir = "${workspace}/src/github.com/srvmsr/testapi/"
+def dockerRepoName = "srvmsr/testapi"
+
+
+podTemplate(label: label,
+        containers: [
+                containerTemplate(name: 'jnlp', image: 'azolo/jnlp-kubectl-slave', runAsUser: '0'),
+                containerTemplate(name: 'docker', image: 'docker:latest', command: 'cat', ttyEnabled: true, runAsUser: '0')
+            ],
+            volumes: [
+                hostPathVolume(hostPath: '/var/run/docker.sock', mountPath: '/var/run/docker.sock'),
+                secretVolume(secretName: 'docker-secret', mountPath: '/root/.docker')
+            ], runAsUser: '0'
+        ) {
+    node(label) {
+        dir(workdir) {
+            stage('Checkout') {
+                timeout(time: 3, unit: 'MINUTES') {
+                    checkout scm
+                }
+                //Fetch tags if no new tags found use commit id for the release
+                def tag = sh (returnStdout: true,script: 'git fetch --tags && git tag --points-at HEAD | awk NF').trim()
+
+                def now = new Date().format("yyyy_MM_dd_HH_mm")
+
+                def shortCommit = sh(returnStdout: true, script: "git log -n 1 --pretty=format:'%h'").trim()
+
+                def version = tag ?: now + shortCommit
+                env.DOCKERTAG = dockerRepoName + ":" + version
+                env.GOCACHE= "/tmp"
+            }
+            stage('Docker Build & Push') {
+                container('docker') {
+                    echo "Building docker image..."
+                    sh """
+                       cd app/TestApi
+                       docker build . -t $DOCKERTAG
+                       docker push $DOCKERTAG
+                       """
+                }
+            }
+            stage('Deploy') {
+                echo "Deploying application..."
+                    sh """
+                       kubectl -n production create cm static --from-file=fileserver/static.json
+                       kubectl -n production apply -f fileserver/fileserver.yaml
+                       
+                       sed -i "s#srvmsr/testapi#$DOCKERTAG#g" app.yaml
+                       kubectl -n production apply -f app.yaml
+                       kubectl wait -n production deployment.apps -l app=app --for=condition=available --timeout=300s
+                       """
+            }
+        }
+    }
+}

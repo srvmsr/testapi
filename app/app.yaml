@@ -1,0 +1,51 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: app
+  labels:
+    app: app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: app
+  template:
+    metadata:
+      labels:
+        app: app
+    spec:
+      containers:
+        - name: app
+          image: srvmsr/testapi:0.0.1
+          env:
+            - name: NGINX
+              value: "http://fileserver/static.json"
+          ports:
+            - containerPort: 80
+              protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: Always
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst
+      securityContext: {}
+      schedulerName: default-scheduler
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: app
+  labels:
+    app: app
+spec:
+  ports:
+    - protocol: TCP
+      port: 5001
+      targetPort: 80
+      nodePort: 30501
+  selector:
+    app: app
+  type: Nodeport
+  sessionAffinity: None
