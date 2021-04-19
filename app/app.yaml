@@ -47,5 +47,5 @@ spec:
       nodePort: 30501
   selector:
     app: app
-  type: Nodeport
+  type: NodePort
   sessionAffinity: None
