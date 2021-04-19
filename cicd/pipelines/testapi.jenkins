@@ -47,7 +47,7 @@ podTemplate(label: label,
             stage('Deploy') {
                 echo "Deploying application..."
                     sh """
-                       kubectl -n production create cm static --from-file=fileserver/static.json
+					   kubectl -n production create configmap static --from-file=fileserver/static.json -o yaml --dry-run=client | kubectl apply -f-
                        kubectl -n production apply -f fileserver/fileserver.yaml
                        
                        sed -i "s#srvmsr/testapi:latest#$DOCKERTAG#g" app/app.yaml
