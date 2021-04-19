@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: srvmsr/testapi:0.0.1
+          image: srvmsr/testapi:latest
           env:
             - name: NGINX
               value: "http://fileserver/static.json"

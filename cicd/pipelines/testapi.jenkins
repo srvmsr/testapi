@@ -50,8 +50,8 @@ podTemplate(label: label,
                        kubectl -n production create cm static --from-file=fileserver/static.json
                        kubectl -n production apply -f fileserver/fileserver.yaml
                        
-                       sed -i "s#srvmsr/testapi#$DOCKERTAG#g" app.yaml
-                       kubectl -n production apply -f app.yaml
+                       sed -i "s#srvmsr/testapi:latest#$DOCKERTAG#g" app/app.yaml
+                       kubectl -n production apply -f app/app.yaml
                        kubectl wait -n production deployment.apps -l app=app --for=condition=available --timeout=300s
                        """
             }
